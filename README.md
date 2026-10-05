@@ -31,11 +31,17 @@ MOOCs suffer from very high dropout rates. This project builds a distributed mac
 | Feature | Description |
 
 | `viewed`, `ndays_act`, `nchapters`, `nforum_posts`, `e_value`, `v_value` | Raw engagement columns |
+
 | `active_span_days` | Days between first and last recorded event |
+
 | `video_per_day` | Videos played per active day |
+
 | `events_per_day` | Events per active day |
+
 | `log_nevents` | `log(1 + nevents)` to reduce skew |
+
 | `forum_active` | 1 if the learner posted in the forum, else 0 |
+
 | `gender_bin` | 1 if gender is `m`, else 0 |
 
 **Leakage prevention:** `grade`, `explored`, and `normalized_Pa` are deliberately excluded because they are likely to leak the label.
@@ -54,15 +60,25 @@ Run the script to see the metrics for your data and split.
 | # | File | Content |
 
 | 1 | `chart1_completion_ratio.png` | Completion vs dropout ratio, and completion by motivation label |
+
 | 2 | `chart2_spark_vs_mapreduce.png` | Spark vs MapReduce processing time (illustrative) |
+
 | 3 | `chart3_rdd_dag.png` | RDD lineage / DAG diagram (illustrative) |
+
 | 4 | `chart4_sparksql_groupby_course.png` | Learner counts per course (Spark SQL GroupBy) |
+
 | 5 | `chart5_kafka_streaming.png` | Simulated Kafka streaming ingestion rate (illustrative) |
+
 | 6 | `chart6_correlation_heatmap.png` | Feature correlation heatmap |
+
 | 7 | `chart7_confusion_matrix.png` | Confusion matrix on the test set |
+
 | 8 | `chart8_roc_curve.png` | ROC curve with AUC |
+
 | 9 | `chart9_feature_importance.png` | Logistic regression coefficient magnitudes |
+
 | 10 | `chart10_activity_distributions.png` | Activity distributions, completed vs dropout |
+
 | 11 | `chart11_model_metrics.png` | Accuracy, F1, and AUC summary |
 
 ## Notes and Limitations

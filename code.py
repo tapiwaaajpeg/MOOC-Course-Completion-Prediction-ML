@@ -1,6 +1,5 @@
 """
 Project: MOOC Course Completion Prediction
-=============================================
 """
 
 from pyspark.sql import SparkSession
@@ -19,10 +18,9 @@ import matplotlib.patches as mpatches
 import matplotlib.patheffects as pe
 import numpy as np
 
-# ── CONFIG ────────────────────────────────────────────────────
+#CONFIG
 DATA_PATH   = "file:///C:/Users/LENOVO/Downloads/archive1/cs_mitx.csv"
-OUTPUT_DIR  = r"C:\Users\LENOVO\Desktop"   # all charts saved here
-# ─────────────────────────────────────────────────────────────
+OUTPUT_DIR  = r"C:\Users\LENOVO\Desktop"   
 
 import os
 def save(filename):
@@ -31,10 +29,7 @@ def save(filename):
     plt.close()
     print("  Saved: " + path)
 
-
-# ══════════════════════════════════════════════════════════════
-# STEP 1 — Start Spark & Load Data  (Unit I)
-# ══════════════════════════════════════════════════════════════
+# STEP 1 — Start Spark & Load Data 
 spark = SparkSession.builder \
     .appName("MOOC_Completion_Prediction") \
     .getOrCreate()
@@ -48,10 +43,7 @@ print("=== Schema ===")
 df.printSchema()
 print(f"Total records loaded: {df.count():,}\n")
 
-
-# ══════════════════════════════════════════════════════════════
 # STEP 2 — Clean Nulls & Filter Invalid Sessions
-# ══════════════════════════════════════════════════════════════
 df = df.dropna(subset=["Completed_or_Not"])
 df = df.filter(col("ndays_act") >= 0)
 df = df.filter(col("nevents")   >= 0)
@@ -72,10 +64,7 @@ df = df.withColumn("grade", col("grade").cast("double")).fillna({"grade": 0.0})
 
 print(f"Records after cleaning: {df.count():,}\n")
 
-
-# ══════════════════════════════════════════════════════════════
-# STEP 3 — Feature Engineering  (Unit VI)
-# ══════════════════════════════════════════════════════════════
+# STEP 3 — Feature Engineering 
 df = df.withColumn("start_dt", to_date(col("start_time_DI"), "d/M/yy")) \
        .withColumn("last_dt",  to_date(col("last_event_DI"),  "d/M/yy"))
 
@@ -100,7 +89,7 @@ df = df.withColumn("forum_active",
 df = df.withColumn("gender_bin",
         when(col("gender") == "m", 1.0).otherwise(0.0))
 
-# ── Class weights to handle 97/3 imbalance ───────────────────
+#Class weights to handle 97/3 imbalance
 total     = df.count()
 n_dropout = df.filter(col("Completed_or_Not") == 0).count()
 n_comp    = df.filter(col("Completed_or_Not") == 1).count()
@@ -113,7 +102,7 @@ print(f"Class weights — Dropout: {weight_dropout:.3f}, Completed: {weight_comp
 df = df.withColumn("classWeight",
         when(col("Completed_or_Not") == 1, weight_comp).otherwise(weight_dropout))
 
-# grade, explored, normalized_Pa removed — likely label leakage
+#grade, explored, normalized_Pa removed — likely label leakage
 FEATURE_COLS = [
     "viewed",
     "ndays_act",
@@ -141,10 +130,7 @@ scaler = StandardScaler(
     withStd=True,
 )
 
-
-# ══════════════════════════════════════════════════════════════
-# STEP 4 — Logistic Regression Pipeline  (Unit VI)
-# ══════════════════════════════════════════════════════════════
+# STEP 4 — Logistic Regression Pipeline
 train_df, test_df = df.randomSplit([0.8, 0.2], seed=42)
 
 lr = LogisticRegression(
@@ -163,10 +149,7 @@ model       = pipeline.fit(train_df)
 predictions = model.transform(test_df)
 print("Done.\n")
 
-
-# ══════════════════════════════════════════════════════════════
-# STEP 5 — Evaluate  (Unit VI)
-# ══════════════════════════════════════════════════════════════
+# STEP 5 — Evaluate
 acc = MulticlassClassificationEvaluator(
     labelCol="Completed_or_Not", predictionCol="prediction", metricName="accuracy"
 ).evaluate(predictions)
@@ -184,10 +167,7 @@ print(f"  Accuracy : {acc:.4f}")
 print(f"  F1-Score : {f1:.4f}")
 print(f"  ROC-AUC  : {auc:.4f}\n")
 
-
-# ══════════════════════════════════════════════════════════════
 # STEP 6 — Visualisations
-# ══════════════════════════════════════════════════════════════
 print("=== Generating Visualisations ===")
 
 C_DROP  = "#FF6B6B"
@@ -195,7 +175,7 @@ C_COMP  = "#00C9A7"
 C_ACC   = "#4ECDC4"
 C_BLUE  = "#45B7D1"
 
-# ── Collect pandas DataFrames once ───────────────────────────
+#Collect pandas DataFrames once
 counts_pd = (df.groupBy("Completed_or_Not").count()
                .toPandas().sort_values("Completed_or_Not"))
 
@@ -223,11 +203,8 @@ lr_model = model.stages[-1]
 coefs    = np.abs(lr_model.coefficients.toArray())
 feat_imp = sorted(zip(FEATURE_COLS, coefs), key=lambda x: x[1])
 
-
-# ──────────────────────────────────────────────────────────────
 # CHART 1 — Completion vs Dropout Ratio + Motivation Label
 #            (original chart, now with imbalance fix applied)
-# ──────────────────────────────────────────────────────────────
 sizes  = counts_pd["count"].tolist()
 labels = ["Dropout", "Completed"]
 
@@ -253,10 +230,7 @@ axes[1].legend(loc="upper right")
 plt.tight_layout()
 save("chart1_completion_ratio.png")
 
-
-# ──────────────────────────────────────────────────────────────
-# CHART 2 — Unit I: Spark vs MapReduce Execution Time
-# ──────────────────────────────────────────────────────────────
+# CHART 2 —: Spark vs MapReduce Execution Time
 stages_names  = ["Batch Job", "Iterative ML\n(10 iterations)", "Stream\nProcessing"]
 mr_times      = [120, 950, 300]
 spark_times   = [45,   80,  20]
@@ -278,10 +252,7 @@ for xi, (m, s) in enumerate(zip(mr_times, spark_times)):
 plt.tight_layout()
 save("chart2_spark_vs_mapreduce.png")
 
-
-# ──────────────────────────────────────────────────────────────
-# CHART 3 — Unit III: RDD Lineage / DAG
-# ──────────────────────────────────────────────────────────────
+# CHART 3 —: RDD Lineage / DAG
 steps  = ["textFile()\n[Source RDD]", "filter()\n[Transform]",
           "map()\n[Transform]", "reduceByKey()\n[Transform]",
           "collect()\n[Action]"]
@@ -313,10 +284,7 @@ ax.text(0.5, 0.05, "Transformations are lazy — executed only when Action is ca
 plt.tight_layout()
 save("chart3_rdd_dag.png")
 
-
-# ──────────────────────────────────────────────────────────────
-# CHART 4 — Unit IV: Spark SQL — Completions per Course (GroupBy)
-# ──────────────────────────────────────────────────────────────
+# CHART 4 —: Spark SQL — Completions per Course (GroupBy)
 pivot_course = course_pd.pivot(
     index="course_id", columns="Completed_or_Not", values="count"
 ).fillna(0)
@@ -334,10 +302,7 @@ ax.grid(axis="x", alpha=0.3)
 plt.tight_layout()
 save("chart4_sparksql_groupby_course.png")
 
-
-# ──────────────────────────────────────────────────────────────
-# CHART 5 — Unit V: Simulated Kafka Streaming Ingestion Rate
-# ──────────────────────────────────────────────────────────────
+# CHART 5 —: Simulated Kafka Streaming Ingestion Rate
 np.random.seed(7)
 time_steps   = np.arange(0, 60)
 base_rate    = 120
@@ -366,10 +331,7 @@ ax.annotate(f"Peak: {int(event_stream[peak_idx])} ev/s",
 plt.tight_layout()
 save("chart5_kafka_streaming.png")
 
-
-# ──────────────────────────────────────────────────────────────
-# CHART 6 — Unit VI: Correlation Heatmap
-# ──────────────────────────────────────────────────────────────
+# CHART 6 —: Correlation Heatmap
 corr = corr_pd.corr()
 cols = list(corr.columns)
 n    = len(cols)
@@ -392,10 +354,7 @@ for i in range(n):
 plt.tight_layout()
 save("chart6_correlation_heatmap.png")
 
-
-# ──────────────────────────────────────────────────────────────
-# CHART 7 — Unit VI: Confusion Matrix
-# ──────────────────────────────────────────────────────────────
+# CHART 7 —: Confusion Matrix
 from sklearn.metrics import confusion_matrix
 cm = confusion_matrix(pred_pd["Completed_or_Not"], pred_pd["prediction"])
 
@@ -415,10 +374,7 @@ for i in range(2):
 plt.tight_layout()
 save("chart7_confusion_matrix.png")
 
-
-# ──────────────────────────────────────────────────────────────
-# CHART 8 — Unit VI: ROC Curve
-# ──────────────────────────────────────────────────────────────
+# CHART 8 —: ROC Curve
 from sklearn.metrics import roc_curve
 
 fpr, tpr, _ = roc_curve(pred_pd["Completed_or_Not"], pred_pd["prob_complete"])
@@ -437,10 +393,7 @@ ax.grid(alpha=0.3)
 plt.tight_layout()
 save("chart8_roc_curve.png")
 
-
-# ──────────────────────────────────────────────────────────────
-# CHART 9 — Unit VI: Feature Importances (LR Coefficients)
-# ──────────────────────────────────────────────────────────────
+# CHART 9 —: Feature Importances (LR Coefficients)
 feat_names = [f for f, _ in feat_imp]
 feat_vals  = [v for _, v in feat_imp]
 
@@ -457,10 +410,7 @@ for i, v in enumerate(feat_vals):
 plt.tight_layout()
 save("chart9_feature_importance.png")
 
-
-# ──────────────────────────────────────────────────────────────
 # CHART 10 — Activity distributions by outcome
-# ──────────────────────────────────────────────────────────────
 fig, axes = plt.subplots(2, 2, figsize=(13, 8))
 fig.suptitle("Unit VI: Activity Distributions — Completed vs Dropout",
              fontsize=13, fontweight="bold")
@@ -485,10 +435,7 @@ for ax, (pcol, title) in zip(axes.flatten(), plot_cols):
 plt.tight_layout()
 save("chart10_activity_distributions.png")
 
-
-# ──────────────────────────────────────────────────────────────
 # CHART 11 — Model Metrics Summary Bar
-# ──────────────────────────────────────────────────────────────
 metrics      = ["Accuracy", "F1-Score\n(weighted)", "ROC-AUC"]
 metric_vals  = [acc, f1, auc]
 bar_c        = [C_COMP, C_ACC, C_BLUE]
